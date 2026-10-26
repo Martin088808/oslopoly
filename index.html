@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="nb">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Oslopoly</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Montserrat:wght@600;700;800;900&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <script>document.write('<link rel="stylesheet" href="css/style.css?v=' + Date.now() + '">');</script>
+  <!-- Online-spill: MQTT over WebSocket (net.js laster en reserve hvis denne ikke kommer) -->
+  <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js" async></script>
+  <script type="importmap">
+  { "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  } }
+  </script>
+</head>
+<body>
+  <div id="scene"></div>
+
+  <!-- Hovedmeny -->
+  <section id="menu" class="screen plus-screen" hidden>
+    <header class="plus-top">
+      <h1 class="plus-band">HOVEDMENY</h1>
+      <span class="plus-user">Oslopoly · eiendomsspill i 3D</span>
+    </header>
+    <nav class="ptiles" aria-label="Hovedmeny">
+      <button class="ptile ptile-big" id="tile-new" type="button">
+        <span class="pt-art art-new">
+          <svg viewBox="0 0 480 270" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <defs>
+              <linearGradient id="g-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2f9cf0"/><stop offset="1" stop-color="#c4eeff"/></linearGradient>
+              <linearGradient id="g-board" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3fff8"/><stop offset="1" stop-color="#bfeed6"/></linearGradient>
+            </defs>
+            <rect width="480" height="270" fill="url(#g-sky)"/>
+            <circle cx="404" cy="54" r="44" fill="#ffe36b" opacity=".25"/><circle cx="404" cy="54" r="30" fill="#ffe36b"/>
+            <g fill="#fff" opacity=".92"><ellipse cx="86" cy="52" rx="46" ry="14"/><ellipse cx="116" cy="41" rx="30" ry="16"/><ellipse cx="292" cy="78" rx="38" ry="11"/><ellipse cx="312" cy="70" rx="20" ry="10"/></g>
+            <g fill="#7fb6e3"><rect x="20" y="110" width="30" height="60"/><rect x="54" y="92" width="22" height="78"/><rect x="80" y="120" width="34" height="50"/><rect x="360" y="100" width="26" height="70"/><rect x="390" y="84" width="20" height="86"/><rect x="414" y="116" width="40" height="54"/><path d="M60 92 l5 -16 l5 16z"/></g>
+            <polygon points="240,128 462,196 240,264 18,196" fill="url(#g-board)" stroke="#fff" stroke-width="7" stroke-linejoin="round"/>
+            <polygon points="240,140 436,196 240,252 44,196" fill="none" stroke="#E3242B" stroke-width="11" stroke-dasharray="34 60"/>
+            <polygon points="240,140 436,196 240,252 44,196" fill="none" stroke="#FFE21F" stroke-width="11" stroke-dasharray="34 60" stroke-dashoffset="-47"/>
+            <polygon points="240,140 436,196 240,252 44,196" fill="none" stroke="#1FAF55" stroke-width="11" stroke-dasharray="20 74" stroke-dashoffset="-20"/>
+            <polygon points="240,140 436,196 240,252 44,196" fill="none" stroke="#1D4FB8" stroke-width="11" stroke-dasharray="14 80" stroke-dashoffset="-80"/>
+            <g transform="translate(110 180)"><path d="M0 14 V0 L10 -9 L20 0 V14Z" fill="#17A24A" stroke="#fff" stroke-width="2.5"/></g>
+            <g transform="translate(134 172)"><path d="M0 14 V0 L10 -9 L20 0 V14Z" fill="#17A24A" stroke="#fff" stroke-width="2.5"/></g>
+            <g transform="translate(330 168)"><path d="M0 20 V0 L18 -13 L36 0 V20Z" fill="#D0161D" stroke="#fff" stroke-width="3"/></g>
+            <g transform="translate(206 168) rotate(-14)"><rect x="-22" y="-22" width="44" height="44" rx="10" fill="#fff" stroke="#d7dde4" stroke-width="2"/><g fill="#d61e25"><circle cx="-10" cy="-10" r="4.5"/><circle cx="0" cy="0" r="4.5"/><circle cx="10" cy="10" r="4.5"/></g></g>
+            <g transform="translate(266 160) rotate(12)"><rect x="-22" y="-22" width="44" height="44" rx="10" fill="#fff" stroke="#d7dde4" stroke-width="2"/><g fill="#111"><circle cx="-10" cy="-10" r="4.5"/><circle cx="10" cy="-10" r="4.5"/><circle cx="-10" cy="10" r="4.5"/><circle cx="10" cy="10" r="4.5"/></g></g>
+          </svg>
+          <span class="pt-logo" aria-hidden="true"><span class="logo-band">OSLOPOLY</span><span class="logo-sub">3D</span></span>
+          <span class="art-tokens" id="art-tokens"></span>
+        </span>
+        <span class="pt-label"><b>SPILL OSLOPOLY</b><small>2–6 spillere · mennesker og datamaskiner</small></span>
+      </button>
+      <div class="ptiles-side">
+        <button class="ptile" id="tile-online" type="button">
+          <span class="pt-art art-online">
+            <svg viewBox="0 0 120 80" aria-hidden="true"><g stroke-linejoin="round">
+              <g transform="translate(22 14) rotate(-8)"><rect width="30" height="52" rx="6" fill="#fff"/><rect x="4" y="7" width="22" height="36" rx="2" fill="#2b8ae8"/><circle cx="15" cy="47.5" r="2.2" fill="#9fb3c8"/><path d="M8 30 l5 -8 l5 6 l4 -5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></g>
+              <g transform="translate(70 12) rotate(8)"><rect width="30" height="52" rx="6" fill="#fff"/><rect x="4" y="7" width="22" height="36" rx="2" fill="#e3242b"/><circle cx="15" cy="47.5" r="2.2" fill="#9fb3c8"/><rect x="9" y="17" width="12" height="12" rx="3" fill="#fff"/><circle cx="12.5" cy="20.5" r="1.4" fill="#e3242b"/><circle cx="17.5" cy="25.5" r="1.4" fill="#e3242b"/></g>
+              <path d="M50 30 q10 -12 20 0" fill="none" stroke="#ffe36b" stroke-width="4" stroke-linecap="round"/><path d="M54 36 q6 -7 12 0" fill="none" stroke="#ffe36b" stroke-width="4" stroke-linecap="round"/><circle cx="60" cy="41" r="3" fill="#ffe36b"/></g></svg>
+          </span>
+          <span class="pt-label"><b>SPILL ONLINE</b><small>Hver på sin skjerm – lag rom eller bli med</small></span>
+        </button>
+        <button class="ptile" id="tile-continue" type="button" hidden>
+          <span class="pt-art art-continue"><span class="continue-tokens" id="continue-art"></span></span>
+          <span class="pt-label"><b>FORTSETT SPILL</b><small id="continue-sub">Fortsett der dere slapp</small></span>
+        </button>
+        <button class="ptile" id="tile-rules" type="button">
+          <span class="pt-art art-rules">
+            <svg viewBox="0 0 120 80" aria-hidden="true"><g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" transform="translate(60 41)"><path d="M-40 -24 Q-20 -32 0 -22 Q20 -32 40 -24 V26 Q20 18 0 28 Q-20 18 -40 26 Z" stroke-width="5"/><path d="M0 -22 V28" stroke-width="4"/><path d="M-31 -11 Q-19 -15 -9 -10 M-31 0 Q-19 -4 -9 1 M-31 11 Q-19 7 -9 12 M9 -10 Q19 -15 31 -11 M9 1 Q19 -4 31 0 M9 12 Q19 7 31 11" stroke-width="3.2"/></g></svg>
+          </span>
+          <span class="pt-label"><b>REGLER</b><small>Slik spiller du Oslopoly</small></span>
+        </button>
+        <button class="ptile" id="tile-settings" type="button">
+          <span class="pt-art art-settings">
+            <svg viewBox="0 0 120 80" aria-hidden="true"><g fill="#fff"><g transform="translate(70 34)"><circle r="17"/><g><rect x="-5" y="-25" width="10" height="12" rx="2"/><rect x="-5" y="13" width="10" height="12" rx="2"/><rect x="-25" y="-5" width="12" height="10" rx="2"/><rect x="13" y="-5" width="12" height="10" rx="2"/></g><g transform="rotate(45)"><rect x="-5" y="-25" width="10" height="12" rx="2"/><rect x="-5" y="13" width="10" height="12" rx="2"/><rect x="-25" y="-5" width="12" height="10" rx="2"/><rect x="13" y="-5" width="12" height="10" rx="2"/></g><circle r="7.5" fill="#3f9a63"/></g>
+            <g transform="translate(38 52) rotate(20)"><circle r="10"/><g><rect x="-3.5" y="-15" width="7" height="8" rx="1.5"/><rect x="-3.5" y="7" width="7" height="8" rx="1.5"/><rect x="-15" y="-3.5" width="8" height="7" rx="1.5"/><rect x="7" y="-3.5" width="8" height="7" rx="1.5"/></g><g transform="rotate(45)"><rect x="-3.5" y="-15" width="7" height="8" rx="1.5"/><rect x="-3.5" y="7" width="7" height="8" rx="1.5"/><rect x="-15" y="-3.5" width="8" height="7" rx="1.5"/><rect x="7" y="-3.5" width="8" height="7" rx="1.5"/></g><circle r="4.2" fill="#3f9a63"/></g></g></svg>
+          </span>
+          <span class="pt-label"><b>INNSTILLINGER</b><small>Tempo, lyd og grafikk</small></span>
+        </button>
+      </div>
+    </nav>
+    <footer class="plus-hints" aria-hidden="true"><span class="ph"><span class="kc kc-a">⏎</span>Velg</span><span class="ph"><span class="kc kc-w">↕</span>Flytt</span><span class="menu-foot">Oslopoly · et eiendomsspill fra Oslo</span></footer>
+  </section>
+
+  <!-- Spilleroppsett -->
+  <section id="setup" class="screen plus-screen" hidden>
+    <header class="plus-top">
+      <h1 class="plus-band">NYTT SPILL</h1>
+      <button class="plus-back" id="setup-back" type="button" title="Tilbake til menyen (Esc)" aria-label="Tilbake til menyen"><span class="kc kc-b" aria-hidden="true">Esc</span><span>Tilbake</span></button>
+    </header>
+    <div class="setup-wrap">
+      <div class="setup-col">
+        <div class="glass setup-main">
+          <h2 class="glass-head">SPILLERE</h2>
+          <div id="setup-players" class="prows"></div>
+        </div>
+      </div>
+      <aside class="glass setup-side">
+        <h2 class="glass-head">REGLER OG TEMPO</h2>
+        <div id="setup-opts" data-opts-box></div>
+      </aside>
+    </div>
+    <div class="start-bar">
+      <div class="start-sum" id="start-sum"></div>
+      <button id="start-game" class="btn go big" type="button" data-primary><span class="pl2"><span class="pa">START SPILLET</span><span class="pb">la terningene rulle</span></span></button>
+    </div>
+  </section>
+
+  <!-- Online: lag rom / bli med, og lobbyen -->
+  <section id="online" class="screen plus-screen" hidden>
+    <header class="plus-top">
+      <h1 class="plus-band">SPILL ONLINE</h1>
+      <button class="plus-back" id="online-back" type="button" title="Tilbake (Esc)" aria-label="Tilbake"><span class="kc kc-b" aria-hidden="true">Esc</span><span id="online-back-l">Tilbake</span></button>
+    </header>
+    <div id="online-body"></div>
+    <div class="start-bar" id="online-bar" hidden>
+      <div class="start-sum" id="online-sum"></div>
+      <div id="online-go"></div>
+    </div>
+  </section>
+
+  <!-- Spillets HUD -->
+  <section id="hud" hidden>
+    <div id="topbar-l">
+      <button class="rbtn" id="btn-menu" type="button" title="Meny" aria-label="Meny"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M5 6.5h14M5 12h14M5 17.5h14"/></svg></button>
+      <span class="hud-logo" aria-hidden="true"><span class="logo-band">OSLOPOLY</span></span>
+    </div>
+    <div id="topbar">
+      <button class="rbtn" id="btn-map" type="button" title="Brettkart (M)" aria-label="Brettkart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/><path d="M3.5 8.4h17M3.5 15.6h17M8.4 3.5v17M15.6 3.5v17"/></svg></button>
+      <button class="rbtn" id="btn-view" type="button" title="Vis hele brettet" aria-label="Vis hele brettet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="3"/><rect x="8.6" y="8.6" width="6.8" height="6.8" rx="1.2" fill="currentColor"/></svg></button>
+      <button class="rbtn" id="btn-log" type="button" title="Hendelseslogg" aria-label="Hendelseslogg" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M9.5 6.5h10M9.5 12h10M9.5 17.5h7"/><circle cx="4.8" cy="6.5" r="1.7" fill="currentColor" stroke="none"/><circle cx="4.8" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="4.8" cy="17.5" r="1.7" fill="currentColor" stroke="none"/></svg></button>
+    </div>
+    <div id="hud-chips" aria-live="polite"></div>
+    <aside id="log" aria-label="Hendelser"><div class="log-title"><span class="band c-teal xs"><i class="bs"></i><span class="bt">HENDELSER</span></span><button class="rbtn red sm" id="log-close" type="button" title="Skjul loggen" aria-label="Skjul loggen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" stroke="currentColor" stroke-width="4.4" stroke-linecap="round"/></svg></button></div><div id="log-list"></div></aside>
+    <div id="banner" aria-live="polite"></div>
+    <div id="players"></div>
+    <div id="dock"><div id="turn-info"></div><div id="actions"></div></div>
+  </section>
+  <button id="skip" type="button" hidden></button>
+  <div id="splash" aria-live="polite"></div>
+
+  <div id="tooltip" hidden></div>
+  <div id="floats"></div>
+  <div id="toasts"></div>
+  <div id="modals"></div>
+  <canvas id="confetti"></canvas>
+  <div id="netfail" role="alert" hidden></div>
+  <div id="net-pause" role="alert" hidden></div>
+
+  <script>
+    // Laster spillfilene med et ferskt versjonsnummer, så nettleseren aldri blander gamle og nye filer.
+    (function () {
+      var v = Date.now();
+      ['data', 'engine', 'ai', 'sound', 'tokens3d', 'city3d', 'boardtex', 'postfx', 'board3d', 'net', 'ui'].forEach(function (n) {
+        document.write('<script src="js/' + n + '.js?v=' + v + '"><\/script>');
+      });
+    })();
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+    import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+    import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+    import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+    import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+    window.PostFXDeps = { EffectComposer, RenderPass, UnrealBloomPass, OutputPass, ShaderPass };
+    window.THREE = THREE;
+    window.OrbitControls = OrbitControls;
+    window.RoundedBoxGeometry = RoundedBoxGeometry;
+    window.RoomEnvironment = RoomEnvironment;
+    window.BufferGeometryUtils = BufferGeometryUtils;
+    window.MP.UI.boot();
+  </script>
+</body>
+</html>
