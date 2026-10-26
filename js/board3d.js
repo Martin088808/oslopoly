@@ -243,25 +243,32 @@
     out: (t) => 1 - Math.pow(1 - t, 3),
     outBack: (t) => { const c = 1.7; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); },
   };
+  // Neste animasjonssteg: requestAnimationFrame, men med en tidtaker som reserve. Nettleseren stopper
+  // rAF i skjulte faner/vinduer, og uten reserven ville spillmotoren (og online-verten) stå fast.
+  function nextTick(cb) {
+    let done = false;
+    const id = requestAnimationFrame((t) => { if (!done) { done = true; cb(t); } });
+    setTimeout(() => { if (!done) { done = true; cancelAnimationFrame(id); cb(performance.now()); } }, 100);
+  }
   // Alle animasjoner går gjennom tween; når «Hopp over» er på, hopper de rett til slutten.
   function tween(dur, fn) {
     return new Promise((res) => {
       if (Board3D.skipping || dur <= 0) { fn(1); res(); return; }
       const t0 = performance.now();
       const step = (now) => {
-        const t = Board3D.skipping ? 1 : Math.min(1, (now - t0) / dur);
+        const t = Board3D.skipping ? 1 : Math.min(1, (performance.now() - t0) / dur);
         fn(t);
-        if (t < 1) requestAnimationFrame(step); else res();
+        if (t < 1) nextTick(step); else res();
       };
-      requestAnimationFrame(step);
+      nextTick(step);
     });
   }
   function delay(ms) {
     return new Promise((res) => {
       if (Board3D.skipping || ms <= 0) { res(); return; }
       const t0 = performance.now();
-      const step = (now) => { if (Board3D.skipping || now - t0 >= ms) res(); else requestAnimationFrame(step); };
-      requestAnimationFrame(step);
+      const step = () => { if (Board3D.skipping || performance.now() - t0 >= ms) res(); else nextTick(step); };
+      nextTick(step);
     });
   }
   function softDot(THREE) {
