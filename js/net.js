@@ -20,7 +20,10 @@
   const MP = window.MP;
 
   // Megleren velges av romkodens første tegn, så vert og gjester alltid havner på samme megler.
+  // shiftr.io først: den bruker vanlig HTTPS-port 443 og slipper gjennom skole-/jobbnett som
+  // stenger MQTT på portene 8084/8884/8081. De andre er reserver.
   const BROKERS = [
+    { url: 'wss://public.cloud.shiftr.io', name: 'shiftr.io', username: 'public', password: 'public' },
     { url: 'wss://broker.hivemq.com:8884/mqtt', name: 'HiveMQ' },
     { url: 'wss://broker.emqx.io:8084/mqtt', name: 'EMQX' },
     { url: 'wss://test.mosquitto.org:8081', name: 'Mosquitto' },
@@ -178,10 +181,24 @@
     }
     topic(n) { return PREFIX + this.room + '/' + n; }
     emit(st) { if (this.status === st) return; this.status = st; if (this.onStatus) this.onStatus(st); }
-    async connect({ subs = [], will = null } = {}) {
+    // Offentlige meglere avviser av og til første tilkobling (f.eks. når mange kobler til samtidig).
+    // Prøv derfor noen ganger med litt pause før vi gir opp.
+    async connect(opts = {}) {
+      let err = null;
+      for (let attempt = 0; attempt < 4; attempt++) {
+        try { return await this.connectOnce(opts); } catch (e) {
+          err = e;
+          console.warn(`Tilkobling til ${this.broker.name} feilet (forsøk ${attempt + 1}):`, e && e.message);
+          await new Promise((r) => setTimeout(r, 900 + attempt * 1300));
+        }
+      }
+      throw err;
+    }
+    async connectOnce({ subs = [], will = null } = {}) {
       const mqtt = await loadLib();
       return new Promise((resolve, reject) => {
         const opts = { clientId: 'osp_' + rid(14), keepalive: 30, reconnectPeriod: 2500, connectTimeout: 9000, clean: true, resubscribe: true };
+        if (this.broker.username) { opts.username = this.broker.username; opts.password = this.broker.password; }
         if (will) opts.will = { topic: this.topic(will.name), payload: JSON.stringify(will.obj), qos: 1, retain: false };
         let settled = false;
         let c = null;
